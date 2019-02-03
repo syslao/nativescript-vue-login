@@ -1,111 +1,54 @@
 <template>
-	<Page>
+	<Page actionBarHidden="true" backgroundSpanUnderStatusBar="true">
     <ScrollView>
 		<FlexboxLayout class="page">
-			<StackLayout class="form">
-				<Image class="logo" src="~/assets/images/NativeScript-Vue.png" />
-				<Label class="header" text="APP NAME" />
-
-				<StackLayout class="input-field" marginBottom="25">
-					<TextField class="input" hint="Email" keyboardType="email" autocorrect="false" autocapitalizationType="none" v-model="user.email"
-					 returnKeyType="next" @returnPress="focusPassword" fontSize="18" />
-					<StackLayout class="hr-light" />
-				</StackLayout>
-
-				<StackLayout class="input-field" marginBottom="25">
-					<TextField ref="password" class="input" hint="Password" secure="true" v-model="user.password" :returnKeyType="isLoggingIn ? 'done' : 'next'"
-					 @returnPress="focusConfirmPassword" fontSize="18" />
-					<StackLayout class="hr-light" />
-				</StackLayout>
-
-				<StackLayout v-show="!isLoggingIn" class="input-field">
-					<TextField ref="confirmPassword" class="input" hint="Confirm password" secure="true" v-model="user.confirmPassword" returnKeyType="done"
-					 fontSize="18" />
-					<StackLayout class="hr-light" />
-				</StackLayout>
-
-				<Button :text="isLoggingIn ? 'Log In' : 'Sign Up'" @tap="submit" class="btn btn-primary m-t-20" />
-        <Button v-show="isLoggingIn" :text="'\uf09a' +' Facebook login'" @tap="loginFacebook" class="fab btn btn-active" />
-        <Button v-show="isLoggingIn" :text="'\uf1a0' +' Google login' " @tap="loginGoogle" class="fab btn btn-active" />
-				<Label v-show="isLoggingIn" text="Forgot your password?" class="login-label" @tap="forgotPassword" />
-			</StackLayout>
-
-			<Label class="login-label sign-up-label" @tap="toggleForm">
-	          <FormattedString>
-	            <Span :text="isLoggingIn ? 'Don’t have an account? ' : 'Back to Login'" />
-	            <Span :text="isLoggingIn ? 'Sign up' : ''" class="bold" />
-	          </FormattedString>
-	        </Label>
+      <StackLayout v-bind:class="getClass()" >
+        <StackLayout class="form">
+            <Image class="logo" src="~/assets/images/NativeScript-Vue.png" />
+            <Label class="header" text="APP NAME" />
+            <StackLayout v-show="!isInitialized">
+              <Label text="Loading" class="loading-label"/>
+              <ActivityIndicator  busy="true" class="activity-indicator"/>
+            </StackLayout>              
+            <StackLayout v-show="isInitialized" class="input-field" marginBottom="25">
+              <TextField class="input" hint="Email" keyboardType="email" autocorrect="false" autocapitalizationType="none" v-model="user.email"
+              returnKeyType="next" @returnPress="focusPassword" fontSize="18" />
+              <StackLayout class="hr-light" />
+            </StackLayout>
+            <StackLayout v-show="isInitialized" class="input-field" marginBottom="25">
+              <TextField ref="password" class="input" hint="Password" secure="true" v-model="user.password" :returnKeyType="isLoggingIn ? 'done' : 'next'"
+              @returnPress="focusConfirmPassword" fontSize="18" />
+              <StackLayout class="hr-light" />
+            </StackLayout>
+            <StackLayout v-show="(isInitialized && !isLoggingIn)"  class="input-field">
+              <TextField ref="confirmPassword" class="input" hint="Confirm password" secure="true" v-model="user.confirmPassword" returnKeyType="done"
+              fontSize="18" />
+              <StackLayout class="hr-light" />
+            </StackLayout>
+            <Button v-show="(isInitialized)" :text="isLoggingIn ? 'Log In' : 'Sign Up'" @tap="submit" class="btn btn-primary m-t-20" />
+            <Button v-show="(isLoggingIn && isInitialized)" :text="'\uf09a' +' Facebook login'" @tap="loginFacebook" class="fab btn btn-active" />
+            <Button v-show="(isLoggingIn && isInitialized)" :text="'\uf1a0' +' Google login' " @tap="loginGoogle" class="fab btn btn-active" />
+            <Label v-show="(isLoggingIn && isInitialized)" text="Forgot your password?" class="login-label" @tap="forgotPassword" />
+        </StackLayout>
+			  <Label v-show="isInitialized" class="login-label sign-up-label" @tap="toggleForm">
+	        <FormattedString>
+	          <Span :text="isLoggingIn ? 'Don’t have an account? ' : 'Back to Login'" />
+	          <Span :text="isLoggingIn ? 'Sign up' : ''" class="bold" />
+          </FormattedString>
+	      </Label>
+      </StackLayout>
 		</FlexboxLayout>
     </ScrollView>
 	</Page>
 </template>
 <script>
+
 // A stub for a service that authenticates users.
+import { isAndroid, isIOS } from "tns-core-modules/platform";
 import firebase from "nativescript-plugin-firebase";
-const userService = {
-  async register(user) {
-    return await firebase.createUser({
-      email: user.email,
-      password: user.password
-    });
-  },
-  async login(user) {
-    return await firebase.login({
-      type: firebase.LoginType.PASSWORD,
-      passwordOptions: {
-        email: user.email,
-        password: user.password
-      }
-    });
-  },
-  async loginFacebook(user) {
-    console.log("facebook login")
-    await firebase
-      .login({
-        type: firebase.LoginType.FACEBOOK,
-        facebookOptions: {
-          // full list: https://developers.facebook.com/docs/facebook-login/permissions/
-          scope: ["public_profile", "email"] // optional: defaults to ['public_profile', 'email']
-        }
-      })
-      .then(result => {
-        console.dir(result)
-        return Promise.resolve(JSON.stringify(result));
-      })
-      .catch(error => {
-        console.log("Error logging in with Facebook")
-        console.error(error);
-        return Promise.reject(error);
-      });
-  },
-  async loginGoogle(user) {
-     await firebase
-      .login({
-        type: firebase.LoginType.GOOGLE       
-      })
-      .then(result => {
-        return Promise.resolve(JSON.stringify(result));
-      })
-      .catch(error => {
-        console.error(error);
-        return Promise.reject(error);
-      });
-  },
-  async resetPassword(email) {
-    return await firebase.resetPassword({
-      email: email
-    });
-  }
-};
-// A stub for the main page of your app. In a real app you’d put this page in its own .vue file.
-const HomePage = {
-  template: `
-	<Page>
-        <Label class="m-20" textWrap="true" text="You have successfully authenticated. This is where you build your core application functionality."></Label>
-	</Page>
-	`
-};
+import { mapState } from "vuex";
+import DashboardPage from "./DashboardPage.vue";
+
 var LoadingIndicator = require("nativescript-loading-indicator")
   .LoadingIndicator;
 var loader = new LoadingIndicator();
@@ -113,6 +56,7 @@ export default {
   data() {
     return {
       isLoggingIn: true,
+      isInitialized: false,
       user: {
         email: "test@test.com",
         password: "tester",
@@ -120,7 +64,36 @@ export default {
       }
     };
   },
+  created() {
+    if(this.$store.state.isLoggedIn!=null){
+      this.isInitialized = true;
+    }
+  },
+  watch: {   
+    isLoggedIn(val) {
+      if (!val) {        
+        this.isInitialized = true;        
+      }else{
+        this.$store.dispatch("fetchProfile");
+      }
+    },
+    profile(val) {
+      if (!val) {
+      }else{
+        this.$navigateTo(DashboardPage, { clearHistory: true });        
+      }
+    }
+  },
+  computed: {
+    ...mapState(["isLoggedIn","profile"])
+  },
   methods: {
+    getClass() {
+      return {
+          "container-loading": this.isInitialized,
+          "container-loaded": !this.isInitialized
+      };
+    },
     toggleForm() {
       this.isLoggingIn = !this.isLoggingIn;
     },
@@ -137,47 +110,55 @@ export default {
       }
     },
     login() {
-      userService
+      this.$authService
         .login(this.user)
         .then(() => {
           loader.hide();
-          this.$navigateTo(HomePage);
+          this.$store.commit('setIsLoggedIn', true);
         })
         .catch(err => {
           console.error(err);
-          loader.hide();          
+          loader.hide();
           this.alert(err);
         });
     },
     loginFacebook() {
       //loader.show();//Don't use this for facebook logins, as the popup covers the UI on IOS
-      userService
+      if (isIOS) this.isInitialized = false;
+      if(isAndroid) loader.show();
+      this.$authService
         .loginFacebook(this.user)
         .then(() => {
-        //  loader.hide();
-          this.$navigateTo(HomePage);
+          //if (isIOS) this.isInitialized = true; //leave this up to avoid weird animation           
+          if(isAndroid) loader.hide();
+          this.$store.commit('setIsLoggedIn', true);
         })
-        .catch((err) => {
-          //loader.hide();
+        .catch(err => {
+          if (isIOS) this.isInitialized = true;
+          else loader.hide();
           console.error(err);
-          this.alert(err)
+          this.alert(err);
         });
     },
-    loginGoogle(){
-        //loader.show();//Don't use this for google logins, as the popup covers the UI on IOS
-        userService
+    loginGoogle() {
+      if (isIOS) this.isInitialized = false;
+      else loader.show();
+
+      this.$authService
         .loginGoogle(this.user)
-        .then((result) => {
-          //loader.hide();          
-          this.$navigateTo(HomePage);          
+        .then(result => {
+          //if (isIOS) this.isInitialized = true;
+          if(isAndroid) loader.hide();
+          this.$store.commit('setIsLoggedIn', true);
         })
-        .catch((error) => {
-          //loader.hide();
+        .catch(error => {
+          if (isIOS) this.isInitialized = true;
+          else loader.hide();
           console.error(err);
-          this.alert(error)
+          this.alert(error);
         });
     },
-    register() {
+    async register() {
       if (this.user.password != this.user.confirmPassword) {
         loader.hide();
         this.alert("Your passwords do not match.");
@@ -194,8 +175,10 @@ export default {
         this.alert("Please enter a valid email address.");
         return;
       }
-      userService
-        .register(this.user)
+      const token = await this.$pushNotificationService.getPushToken()  
+
+      this.$authService
+        .register(this.user, token)
         .then(() => {
           loader.hide();
           this.alert("Your account was successfully created.");
@@ -219,7 +202,7 @@ export default {
       }).then(data => {
         if (data.result) {
           loader.show();
-          userService
+          this.$authService
             .resetPassword(data.text.trim())
             .then(() => {
               loader.hide();
@@ -254,46 +237,41 @@ export default {
 </script>
 	
 <style scoped>
+<style scoped>
 .page {
   align-items: center;
   flex-direction: column;
 }
-
 .form {
   margin-left: 30;
   margin-right: 30;
   flex-grow: 2;
   vertical-align: middle;
 }
-
 .logo {
   margin-bottom: 12;
   height: 90;
   font-weight: bold;
+  horizontal-align: center;
 }
-
 .header {
   horizontal-align: center;
   font-size: 25;
   font-weight: 600;
-  margin-bottom: 70;
+  margin-bottom: 20;
   text-align: center;
-  color: #d51a1a;
+  color: #66a59a;
 }
-
 .input-field {
-  margin-bottom: 25;
+  margin-bottom: 20;
 }
-
 .input {
   font-size: 18;
   placeholder-color: #a8a8a8;
 }
-
 .input-field .input {
   font-size: 54;
 }
-
 .btn-primary {
   height: 50;
   margin: 30 5 15 5;
@@ -302,18 +280,51 @@ export default {
   font-size: 20;
   font-weight: 600;
 }
-
+.loading-label {
+  color: #66a59a;
+  horizontal-align: center;
+  font: 16;
+  /* margin-top: 80;*/
+}
 .login-label {
   horizontal-align: center;
   color: #a8a8a8;
   font-size: 16;
 }
-
 .sign-up-label {
   margin-bottom: 20;
 }
-
 .bold {
   color: #000000;
+}
+.container-loading {
+  /*margin-top: 200;*/
+  animation-name: loading;
+  animation-fill-mode: forwards;
+  animation-duration: 0.6;
+  animation-iteration-count: 1;
+}
+@keyframes loading {
+  0% {
+    transform: translate(0, 200);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+.container-loaded {
+  /*margin-top: 200;*/
+  animation-name: loaded;
+  animation-fill-mode: forwards;
+  animation-duration: 0.6;
+  animation-iteration-count: 1;
+}
+@keyframes loaded {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(0, 200);
+  }
 }
 </style>
